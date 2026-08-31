@@ -3,6 +3,7 @@
 /* ---------- Persistence ---------- */
 
 const STORAGE_KEY = "mentactiva-scores-v1";
+const SOUND_KEY = "mentactiva-sound-muted";
 
 function loadScores() {
   try {
@@ -41,6 +42,80 @@ function renderTotalScore() {
   document.getElementById("total-score").textContent = scores.total;
 }
 
+/* ---------- Sound engine ---------- */
+
+const Sound = (() => {
+  let ctx;
+  let muted = false;
+  try {
+    muted = localStorage.getItem(SOUND_KEY) === "1";
+  } catch (e) {
+    /* ignore */
+  }
+
+  function ensureCtx() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+
+  function tone(freq, duration, type = "sine", gainValue = 0.15, delay = 0) {
+    if (muted) return;
+    const c = ensureCtx();
+    if (!c) return;
+    try {
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(gainValue, c.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + delay + duration);
+      osc.connect(gain);
+      gain.connect(c.destination);
+      osc.start(c.currentTime + delay);
+      osc.stop(c.currentTime + delay + duration + 0.02);
+    } catch (e) {
+      /* audio unavailable, ignore */
+    }
+  }
+
+  return {
+    isMuted: () => muted,
+    setMuted(value) {
+      muted = value;
+      try {
+        localStorage.setItem(SOUND_KEY, value ? "1" : "0");
+      } catch (e) {
+        /* ignore */
+      }
+    },
+    click: () => tone(320, 0.08, "square", 0.07),
+    flip: () => tone(440, 0.09, "triangle", 0.09),
+    correct: () => {
+      tone(660, 0.12, "sine", 0.14);
+      tone(880, 0.16, "sine", 0.12, 0.09);
+    },
+    wrong: () => tone(150, 0.28, "sawtooth", 0.12),
+    tick: () => tone(920, 0.045, "square", 0.04),
+    timeout: () => tone(110, 0.4, "sawtooth", 0.14),
+    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, "sine", 0.13, i * 0.1)),
+  };
+})();
+
+const soundBtn = document.getElementById("sound-toggle");
+function renderSoundBtn() {
+  soundBtn.textContent = Sound.isMuted() ? "🔇" : "🔊";
+  soundBtn.title = Sound.isMuted() ? "Activar sonido" : "Silenciar sonido";
+}
+soundBtn.addEventListener("click", () => {
+  Sound.setMuted(!Sound.isMuted());
+  renderSoundBtn();
+});
+
 /* ---------- View routing ---------- */
 
 const views = document.querySelectorAll(".view");
@@ -50,10 +125,18 @@ function showView(id) {
 
 document.querySelectorAll("[data-back]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    stopReactionTimers();
+    stopAllTimers();
     showView("view-menu");
   });
 });
+
+function stopAllTimers() {
+  stopReactionTimers();
+  clearInterval(memoryTimerInterval);
+  clearInterval(mathTimerInterval);
+  clearInterval(seqTimerInterval);
+  clearInterval(wordTimerInterval);
+}
 
 /* ---------- Result screen helper ---------- */
 
@@ -64,6 +147,7 @@ function showResult(title, points, detail, restartFn) {
   document.getElementById("result-score").textContent = `+${points}`;
   document.getElementById("result-detail").textContent = detail;
   addPoints(points);
+  Sound.win();
   lastGameRestart = restartFn;
   showView("view-result");
 }
@@ -71,6 +155,57 @@ function showResult(title, points, detail, restartFn) {
 document.getElementById("result-retry").addEventListener("click", () => {
   if (lastGameRestart) lastGameRestart();
 });
+
+/* ---------- Difficulty helper ---------- */
+
+const DIFFICULTY_LABELS = [
+  { key: "easy", label: "Fácil" },
+  { key: "normal", label: "Normal" },
+  { key: "hard", label: "Difícil" },
+];
+
+function renderDifficultyRow(containerId, current, onSelect) {
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = "";
+  DIFFICULTY_LABELS.forEach((d) => {
+    const btn = document.createElement("button");
+    btn.className = "diff-btn" + (d.key === current ? " active" : "");
+    btn.textContent = d.label;
+    btn.addEventListener("click", () => {
+      Sound.click();
+      onSelect(d.key);
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+/* ---------- Countdown timer helper ---------- */
+
+function startCountdown({ seconds, fillEl, labelEl, onTick, onExpire }) {
+  const total = seconds;
+  let remaining = seconds;
+  fillEl.style.width = "100%";
+  fillEl.classList.remove("low");
+  labelEl.textContent = `${remaining}s`;
+  const intervalId = setInterval(() => {
+    remaining -= 0.1;
+    if (remaining <= 0) {
+      clearInterval(intervalId);
+      fillEl.style.width = "0%";
+      labelEl.textContent = "0s";
+      onExpire();
+      return;
+    }
+    fillEl.style.width = `${(remaining / total) * 100}%`;
+    if (remaining <= total * 0.25) fillEl.classList.add("low");
+    const roundedNow = Math.ceil(remaining);
+    if (roundedNow !== Math.ceil(remaining + 0.1)) {
+      labelEl.textContent = `${roundedNow}s`;
+      if (roundedNow <= 3 && onTick) onTick(roundedNow);
+    }
+  }, 100);
+  return intervalId;
+}
 
 /* ---------- Game catalogue / menu ---------- */
 
@@ -88,7 +223,7 @@ const GAMES = [
     id: "math",
     icon: "➗",
     title: "Cálculo Rápido",
-    desc: "Resuelve 10 operaciones antes de que se acabe el tiempo.",
+    desc: "Resuelve operaciones antes de que se acabe el tiempo.",
     bestKey: "math",
     bestLabel: (v) => (v ? `Mejor racha: ${v}` : ""),
     start: () => startMath(),
@@ -108,7 +243,7 @@ const GAMES = [
     title: "Palabras Revueltas",
     desc: "Ordena las letras para formar la palabra correcta.",
     bestKey: "word",
-    bestLabel: (v) => (v ? `Mejor: ${v}/8` : ""),
+    bestLabel: (v) => (v ? `Mejor: ${v} palabras` : ""),
     start: () => startWord(),
   },
   {
@@ -135,7 +270,10 @@ function renderMenu() {
       <p>${g.desc}</p>
       <span class="game-best">${g.bestLabel(best)}</span>
     `;
-    card.addEventListener("click", g.start);
+    card.addEventListener("click", () => {
+      Sound.click();
+      g.start();
+    });
     grid.appendChild(card);
   });
 }
@@ -147,32 +285,17 @@ const MEMORY_ICONS = ["🍎", "🚀", "🎵", "🐳", "🌟", "🍩", "🎲", "�
 let memoryState = null;
 let memoryTimerInterval = null;
 
-const memDiffButtons = [
-  { label: "Fácil", pairs: 4 },
-  { label: "Normal", pairs: 6 },
-  { label: "Difícil", pairs: 8 },
-];
-let memDifficultyIndex = 1;
+const MEMORY_PAIRS = { easy: 4, normal: 6, hard: 8 };
+let memDifficulty = "normal";
 
-function renderMemDifficulty() {
-  const wrap = document.getElementById("mem-diff");
-  wrap.innerHTML = "";
-  memDiffButtons.forEach((d, i) => {
-    const btn = document.createElement("button");
-    btn.className = "diff-btn" + (i === memDifficultyIndex ? " active" : "");
-    btn.textContent = d.label;
-    btn.addEventListener("click", () => {
-      memDifficultyIndex = i;
-      startMemory();
-    });
-    wrap.appendChild(btn);
-  });
-}
-
-function startMemory() {
+function startMemory(diff) {
+  if (diff) memDifficulty = diff;
   showView("view-memory");
-  renderMemDifficulty();
-  const pairs = memDiffButtons[memDifficultyIndex].pairs;
+  renderDifficultyRow("mem-diff", memDifficulty, (key) => {
+    startMemory(key);
+  });
+
+  const pairs = MEMORY_PAIRS[memDifficulty];
   const icons = MEMORY_ICONS.slice(0, pairs);
   const deck = shuffle([...icons, ...icons]).map((icon, idx) => ({
     id: idx,
@@ -198,8 +321,6 @@ function startMemory() {
   const best = scores.memory;
   document.getElementById("mem-best").textContent = best ? `${best} mov.` : "—";
 
-  const gridEl = document.getElementById("memory-grid");
-  gridEl.style.gridTemplateColumns = pairs <= 4 ? "repeat(4, 1fr)" : pairs <= 6 ? "repeat(4, 1fr)" : "repeat(4, 1fr)";
   renderMemoryGrid();
 
   clearInterval(memoryTimerInterval);
@@ -229,6 +350,7 @@ function flipMemoryTile(id) {
   if (!tile || tile.flipped || tile.matched) return;
 
   tile.flipped = true;
+  Sound.flip();
 
   if (!state.firstPick) {
     state.firstPick = tile;
@@ -246,6 +368,7 @@ function flipMemoryTile(id) {
     state.firstPick.matched = true;
     state.secondPick.matched = true;
     state.matchedCount += 1;
+    Sound.correct();
     resetMemoryPicks();
     renderMemoryGrid();
 
@@ -258,10 +381,11 @@ function flipMemoryTile(id) {
         "¡Memoria completada!",
         points,
         `${state.moves} movimientos en ${elapsed}s`,
-        startMemory
+        () => startMemory()
       );
     }
   } else {
+    Sound.wrong();
     setTimeout(() => {
       state.firstPick.flipped = false;
       state.secondPick.flipped = false;
@@ -279,11 +403,23 @@ function resetMemoryPicks() {
 
 /* ================= MATH GAME ================= */
 
+const MATH_DIFF = {
+  easy: { min: 5, max: 40, multMin: 2, multMax: 8, time: 20, questions: 8 },
+  normal: { min: 10, max: 90, multMin: 2, multMax: 12, time: 15, questions: 10 },
+  hard: { min: 20, max: 150, multMin: 4, multMax: 15, time: 10, questions: 12 },
+};
+let mathDifficulty = "normal";
 let mathState = null;
+let mathTimerInterval = null;
 
-function startMath() {
+function startMath(diff) {
+  if (diff) mathDifficulty = diff;
   showView("view-math");
-  mathState = { index: 0, correct: 0, total: 10 };
+  renderDifficultyRow("math-diff", mathDifficulty, (key) => startMath(key));
+
+  const conf = MATH_DIFF[mathDifficulty];
+  mathState = { index: 0, correct: 0, total: conf.questions };
+  document.getElementById("math-total").textContent = conf.questions;
   document.getElementById("math-correct").textContent = "0";
   document.getElementById("math-feedback").textContent = "";
   document.getElementById("math-feedback").className = "feedback";
@@ -295,20 +431,21 @@ function randInt(min, max) {
 }
 
 function generateMathQuestion() {
+  const conf = MATH_DIFF[mathDifficulty];
   const ops = ["+", "-", "×"];
   const op = ops[randInt(0, ops.length - 1)];
   let a, b, answer;
   if (op === "+") {
-    a = randInt(10, 90);
-    b = randInt(10, 90);
+    a = randInt(conf.min, conf.max);
+    b = randInt(conf.min, conf.max);
     answer = a + b;
   } else if (op === "-") {
-    a = randInt(20, 99);
+    a = randInt(conf.min, conf.max);
     b = randInt(1, a);
     answer = a - b;
   } else {
-    a = randInt(2, 12);
-    b = randInt(2, 12);
+    a = randInt(conf.multMin, conf.multMax);
+    b = randInt(conf.multMin, conf.multMax);
     answer = a * b;
   }
   const options = new Set([answer]);
@@ -321,6 +458,7 @@ function generateMathQuestion() {
 }
 
 function nextMathQuestion() {
+  clearInterval(mathTimerInterval);
   if (mathState.index >= mathState.total) {
     setBest("math", mathState.correct, true);
     const points = mathState.correct * 12;
@@ -328,7 +466,7 @@ function nextMathQuestion() {
       "¡Cálculo terminado!",
       points,
       `${mathState.correct}/${mathState.total} respuestas correctas`,
-      startMath
+      () => startMath()
     );
     return;
   }
@@ -348,9 +486,19 @@ function nextMathQuestion() {
     btn.addEventListener("click", () => answerMath(btn, opt));
     optsEl.appendChild(btn);
   });
+
+  const conf = MATH_DIFF[mathDifficulty];
+  mathTimerInterval = startCountdown({
+    seconds: conf.time,
+    fillEl: document.getElementById("math-timer-fill"),
+    labelEl: document.getElementById("math-timer-label"),
+    onTick: () => Sound.tick(),
+    onExpire: () => answerMath(null, null),
+  });
 }
 
 function answerMath(btn, chosen) {
+  clearInterval(mathTimerInterval);
   const { answer } = mathState.current;
   const optsEl = document.getElementById("math-options");
   [...optsEl.children].forEach((b) => (b.disabled = true));
@@ -362,32 +510,40 @@ function answerMath(btn, chosen) {
     document.getElementById("math-correct").textContent = mathState.correct;
     feedback.textContent = "¡Correcto!";
     feedback.className = "feedback good";
+    Sound.correct();
   } else {
-    btn.classList.add("wrong");
-    feedback.textContent = `Incorrecto. Era ${answer}.`;
+    if (btn) btn.classList.add("wrong");
+    feedback.textContent = chosen === null ? `¡Tiempo agotado! Era ${answer}.` : `Incorrecto. Era ${answer}.`;
     feedback.className = "feedback bad";
+    chosen === null ? Sound.timeout() : Sound.wrong();
   }
 
-  setTimeout(nextMathQuestion, 550);
+  setTimeout(nextMathQuestion, 650);
 }
 
 /* ================= SEQUENCE GAME ================= */
 
+const SEQ_DIFF = {
+  easy: { time: 20, stepMax: 3, decoySpread: 4 },
+  normal: { time: 15, stepMax: 5, decoySpread: 6 },
+  hard: { time: 10, stepMax: 7, decoySpread: 9 },
+};
+let seqDifficulty = "normal";
 let seqState = null;
+let seqTimerInterval = null;
 
 function generateSequence(level) {
+  const conf = SEQ_DIFF[seqDifficulty];
   const type = randInt(0, 2);
   const start = randInt(1, 10);
-  let step = randInt(2, 4 + Math.floor(level / 2));
+  const step = randInt(2, conf.stepMax + Math.floor(level / 2));
   let seq = [];
   let next;
 
   if (type === 0) {
-    // arithmetic
     seq = [0, 1, 2, 3].map((i) => start + i * step);
     next = start + 4 * step;
   } else if (type === 1) {
-    // geometric-ish (multiply)
     const mult = randInt(2, 3);
     let v = randInt(1, 4);
     seq = [];
@@ -397,7 +553,6 @@ function generateSequence(level) {
     }
     next = v;
   } else {
-    // fibonacci-like
     let a = randInt(1, 5);
     let b = randInt(1, 5);
     seq = [a, b];
@@ -412,14 +567,16 @@ function generateSequence(level) {
 
   const options = new Set([next]);
   while (options.size < 4) {
-    const fake = next + randInt(-5, 5) * randInt(1, 2 + level);
+    const fake = next + randInt(-conf.decoySpread, conf.decoySpread) * randInt(1, 2 + level);
     if (fake !== next) options.add(fake);
   }
   return { seq, next, options: shuffle([...options]) };
 }
 
-function startSequence() {
+function startSequence(diff) {
+  if (diff) seqDifficulty = diff;
   showView("view-sequence");
+  renderDifficultyRow("seq-diff", seqDifficulty, (key) => startSequence(key));
   seqState = { level: 1 };
   document.getElementById("seq-best").textContent = scores.sequence || 0;
   document.getElementById("seq-feedback").textContent = "";
@@ -427,6 +584,7 @@ function startSequence() {
 }
 
 function nextSequenceRound() {
+  clearInterval(seqTimerInterval);
   document.getElementById("seq-level").textContent = seqState.level;
   seqState.current = generateSequence(seqState.level);
 
@@ -453,49 +611,73 @@ function nextSequenceRound() {
     optsEl.appendChild(btn);
   });
   document.getElementById("seq-feedback").textContent = "";
+
+  const conf = SEQ_DIFF[seqDifficulty];
+  seqTimerInterval = startCountdown({
+    seconds: conf.time,
+    fillEl: document.getElementById("seq-timer-fill"),
+    labelEl: document.getElementById("seq-timer-label"),
+    onTick: () => Sound.tick(),
+    onExpire: () => answerSequence(null, null),
+  });
+}
+
+function endSequenceGame(reason) {
+  const feedback = document.getElementById("seq-feedback");
+  feedback.textContent = reason;
+  feedback.className = "feedback bad";
+  const finalLevel = seqState.level;
+  setBest("sequence", finalLevel, true);
+  const points = finalLevel * 15;
+  setTimeout(() => {
+    showResult("Secuencia Lógica", points, `Alcanzaste el nivel ${finalLevel}`, () => startSequence());
+  }, 900);
 }
 
 function answerSequence(btn, chosen) {
+  clearInterval(seqTimerInterval);
   const { next } = seqState.current;
   const optsEl = document.getElementById("seq-options");
   [...optsEl.children].forEach((b) => (b.disabled = true));
-  const feedback = document.getElementById("seq-feedback");
 
   if (chosen === next) {
     btn.classList.add("correct");
+    const feedback = document.getElementById("seq-feedback");
     feedback.textContent = "¡Correcto! Subiendo de nivel...";
     feedback.className = "feedback good";
+    Sound.correct();
     seqState.level += 1;
     setTimeout(nextSequenceRound, 700);
   } else {
-    btn.classList.add("wrong");
-    feedback.textContent = `Fin del juego. La respuesta era ${next}.`;
-    feedback.className = "feedback bad";
-    const finalLevel = seqState.level;
-    setBest("sequence", finalLevel, true);
-    const points = finalLevel * 15;
-    setTimeout(() => {
-      showResult("Secuencia Lógica", points, `Alcanzaste el nivel ${finalLevel}`, startSequence);
-    }, 900);
+    if (btn) btn.classList.add("wrong");
+    chosen === null ? Sound.timeout() : Sound.wrong();
+    endSequenceGame(chosen === null ? `¡Tiempo agotado! Era ${next}.` : `Fin del juego. La respuesta era ${next}.`);
   }
 }
 
 /* ================= WORD GAME ================= */
 
 const WORD_BANK = [
-  { word: "MEMORIA", hint: "Capacidad de retener información" },
-  { word: "CEREBRO", hint: "Órgano del pensamiento" },
-  { word: "LOGICA", hint: "Razonamiento estructurado" },
-  { word: "ENIGMA", hint: "Cosa difícil de entender" },
-  { word: "PUZLE", hint: "Rompecabezas" },
-  { word: "INGENIO", hint: "Capacidad para inventar soluciones" },
-  { word: "REFLEJO", hint: "Reacción rápida e involuntaria" },
-  { word: "ATENCION", hint: "Concentración en algo" },
-  { word: "ESTRATEGIA", hint: "Plan para lograr un objetivo" },
-  { word: "CONCENTRACION", hint: "Enfoque mental total" },
+  { word: "PUZLE", hint: "Rompecabezas", level: 1 },
+  { word: "CEREBRO", hint: "Órgano del pensamiento", level: 1 },
+  { word: "ENIGMA", hint: "Cosa difícil de entender", level: 1 },
+  { word: "MEMORIA", hint: "Capacidad de retener información", level: 2 },
+  { word: "LOGICA", hint: "Razonamiento estructurado", level: 2 },
+  { word: "INGENIO", hint: "Capacidad para inventar soluciones", level: 2 },
+  { word: "REFLEJO", hint: "Reacción rápida e involuntaria", level: 2 },
+  { word: "ATENCION", hint: "Concentración en algo", level: 3 },
+  { word: "ESTRATEGIA", hint: "Plan para lograr un objetivo", level: 3 },
+  { word: "CONCENTRACION", hint: "Enfoque mental total", level: 3 },
 ];
 
+const WORD_DIFF = {
+  easy: { time: 30, maxLevel: 1 },
+  normal: { time: 20, maxLevel: 2 },
+  hard: { time: 14, maxLevel: 3 },
+};
+let wordDifficulty = "normal";
 let wordState = null;
+let wordTimerInterval = null;
 
 function scrambleWord(word) {
   let letters;
@@ -505,16 +687,23 @@ function scrambleWord(word) {
   return letters.join("");
 }
 
-function startWord() {
+function startWord(diff) {
+  if (diff) wordDifficulty = diff;
   showView("view-word");
-  const pool = shuffle([...WORD_BANK]).slice(0, 8);
+  renderDifficultyRow("word-diff", wordDifficulty, (key) => startWord(key));
+
+  const conf = WORD_DIFF[wordDifficulty];
+  const eligible = WORD_BANK.filter((w) => w.level <= conf.maxLevel);
+  const pool = shuffle(eligible).slice(0, Math.min(8, eligible.length));
   wordState = { pool, index: 0, correct: 0 };
+  document.getElementById("word-total").textContent = pool.length;
   document.getElementById("word-correct").textContent = "0";
   document.getElementById("word-best").textContent = scores.word || 0;
   nextWordRound();
 }
 
 function nextWordRound() {
+  clearInterval(wordTimerInterval);
   if (wordState.index >= wordState.pool.length) {
     setBest("word", wordState.correct, true);
     const points = wordState.correct * 13;
@@ -522,7 +711,7 @@ function nextWordRound() {
       "¡Palabras completadas!",
       points,
       `${wordState.correct}/${wordState.pool.length} palabras acertadas`,
-      startWord
+      () => startWord()
     );
     return;
   }
@@ -537,35 +726,55 @@ function nextWordRound() {
   input.value = "";
   input.disabled = false;
   input.focus();
+
+  const conf = WORD_DIFF[wordDifficulty];
+  wordTimerInterval = startCountdown({
+    seconds: conf.time,
+    fillEl: document.getElementById("word-timer-fill"),
+    labelEl: document.getElementById("word-timer-label"),
+    onTick: () => Sound.tick(),
+    onExpire: () => submitWord(true),
+  });
 }
 
-function submitWord() {
+function submitWord(timedOut) {
   if (!wordState.current) return;
   const input = document.getElementById("word-input");
   if (input.disabled) return;
+  clearInterval(wordTimerInterval);
   const guess = input.value.trim().toUpperCase();
   const feedback = document.getElementById("word-feedback");
   input.disabled = true;
 
-  if (guess === wordState.current.word) {
+  if (!timedOut && guess === wordState.current.word) {
     wordState.correct += 1;
     document.getElementById("word-correct").textContent = wordState.correct;
     feedback.textContent = "¡Correcto!";
     feedback.className = "feedback good";
+    Sound.correct();
   } else {
-    feedback.textContent = `La palabra era: ${wordState.current.word}`;
+    feedback.textContent = timedOut
+      ? `¡Tiempo agotado! Era: ${wordState.current.word}`
+      : `La palabra era: ${wordState.current.word}`;
     feedback.className = "feedback bad";
+    timedOut ? Sound.timeout() : Sound.wrong();
   }
   setTimeout(nextWordRound, 900);
 }
 
-document.getElementById("word-submit").addEventListener("click", submitWord);
+document.getElementById("word-submit").addEventListener("click", () => submitWord(false));
 document.getElementById("word-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") submitWord();
+  if (e.key === "Enter") submitWord(false);
 });
 
 /* ================= REACTION GAME ================= */
 
+const REACTION_DIFF = {
+  easy: { delayMin: 1500, delayMax: 3500, rounds: 5 },
+  normal: { delayMin: 1000, delayMax: 3000, rounds: 5 },
+  hard: { delayMin: 500, delayMax: 1800, rounds: 6 },
+};
+let reactionDifficulty = "normal";
 let reactionState = null;
 let reactionTimeout = null;
 
@@ -573,9 +782,14 @@ function stopReactionTimers() {
   clearTimeout(reactionTimeout);
 }
 
-function startReaction() {
+function startReaction(diff) {
+  if (diff) reactionDifficulty = diff;
   showView("view-reaction");
-  reactionState = { round: 0, total: 5, times: [], phase: "idle" };
+  renderDifficultyRow("reac-diff", reactionDifficulty, (key) => startReaction(key));
+
+  const conf = REACTION_DIFF[reactionDifficulty];
+  reactionState = { round: 0, total: conf.rounds, times: [], phase: "idle" };
+  document.getElementById("reac-total").textContent = conf.rounds;
   document.getElementById("reac-avg").textContent = "—";
   document.getElementById("reac-best").textContent = scores.reaction ? `${scores.reaction} ms` : "—";
   document.getElementById("reac-feedback").textContent = "";
@@ -586,7 +800,10 @@ function setupReactionBox() {
   const box = document.getElementById("reaction-box");
   box.className = "reaction-box wait";
   box.textContent = "Haz clic para empezar la ronda";
-  box.onclick = () => beginReactionRound();
+  box.onclick = () => {
+    Sound.click();
+    beginReactionRound();
+  };
   document.getElementById("reac-count").textContent = Math.min(reactionState.round + 1, reactionState.total);
 }
 
@@ -597,6 +814,7 @@ function beginReactionRound() {
   box.onclick = () => {
     if (reactionState.phase === "waiting") {
       stopReactionTimers();
+      Sound.wrong();
       box.className = "reaction-box wait";
       box.textContent = "¡Muy pronto! Haz clic para reintentar";
       reactionState.phase = "idle";
@@ -604,7 +822,8 @@ function beginReactionRound() {
     }
   };
   reactionState.phase = "waiting";
-  const delay = randInt(1200, 3200);
+  const conf = REACTION_DIFF[reactionDifficulty];
+  const delay = randInt(conf.delayMin, conf.delayMax);
   reactionTimeout = setTimeout(() => {
     reactionState.phase = "go";
     reactionState.goTime = performance.now();
@@ -618,6 +837,7 @@ function finishReactionRound() {
   const elapsed = Math.round(performance.now() - reactionState.goTime);
   reactionState.times.push(elapsed);
   reactionState.round += 1;
+  Sound.correct();
 
   const feedback = document.getElementById("reac-feedback");
   feedback.textContent = `${elapsed} ms`;
@@ -635,7 +855,7 @@ function finishReactionRound() {
         "¡Reflejos medidos!",
         points,
         `Promedio: ${avg} ms · Mejor: ${best} ms`,
-        startReaction
+        () => startReaction()
       );
     }, 600);
   } else {
@@ -657,4 +877,5 @@ function shuffle(arr) {
 /* ---------- Init ---------- */
 
 renderTotalScore();
+renderSoundBtn();
 renderMenu();

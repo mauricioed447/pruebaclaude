@@ -16,10 +16,21 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 8% 8%, rgba(124, 92, 255, 0.20), transparent 42%),
+    radial-gradient(circle at 92% 4%, rgba(55, 230, 176, 0.14), transparent 40%),
+    radial-gradient(circle at 50% 60%, rgba(255, 92, 138, 0.10), transparent 45%),
+    radial-gradient(circle at 15% 95%, rgba(124, 92, 255, 0.14), transparent 40%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ccircle cx='1.6' cy='1.6' r='1.6' fill='%232a2f4a' fill-opacity='0.7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -76,6 +87,28 @@ img { max-width: 100%; }
   height: 500px;
   background: radial-gradient(ellipse at center, rgba(124,92,255,0.35), transparent 65%);
   z-index: -1;
+}
+
+.hero-bg-graphic {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.55;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hero-bg-graphic svg { width: 100%; height: 100%; }
+.net-lines line {
+  stroke: var(--accent);
+  stroke-opacity: 0.28;
+  stroke-width: 1.4;
+}
+.net-nodes circle {
+  fill: var(--accent-2);
+  fill-opacity: 0.55;
+}
+@media (max-width: 700px) {
+  .hero-bg-graphic { opacity: 0.3; }
 }
 .eyebrow {
   display: inline-flex;

@@ -15,8 +15,11 @@
         <span class="brand-mark">🧠</span>
         MenteActiva
       </a>
-      <div class="total-score">
-        Puntos totales: <span class="value" id="total-score">0</span>
+      <div class="header-controls">
+        <button class="icon-btn" id="sound-toggle" title="Silenciar sonido" aria-label="Silenciar sonido">🔊</button>
+        <div class="total-score">
+          Puntos totales: <span class="value" id="total-score">0</span>
+        </div>
       </div>
     </header>
 
@@ -53,14 +56,19 @@
         <div class="panel-header">
           <button class="back-btn" data-back>← Menú</button>
           <div class="stat-row">
-            <span>Pregunta: <b id="math-count">1</b>/10</span>
+            <span>Pregunta: <b id="math-count">1</b>/<b id="math-total">10</b></span>
             <span>Aciertos: <b id="math-correct">0</b></span>
             <span>Mejor racha: <b id="math-best">0</b></span>
           </div>
         </div>
         <div class="center-col">
           <h2>Cálculo Rápido</h2>
+          <div class="difficulty-row" id="math-diff"></div>
           <div class="progress-bar"><div class="progress-fill" id="math-progress"></div></div>
+          <div class="timer-row">
+            ⏱️ <div class="progress-bar"><div class="timer-fill" id="math-timer-fill"></div></div>
+            <span id="math-timer-label">15s</span>
+          </div>
           <div class="big-number" id="math-question">?</div>
           <div class="option-grid" id="math-options"></div>
           <div class="feedback" id="math-feedback"></div>
@@ -80,7 +88,12 @@
         </div>
         <div class="center-col">
           <h2>Secuencia Lógica</h2>
+          <div class="difficulty-row" id="seq-diff"></div>
           <p class="hero-line" style="margin:0">¿Qué número continúa la serie?</p>
+          <div class="timer-row">
+            ⏱️ <div class="progress-bar"><div class="timer-fill" id="seq-timer-fill"></div></div>
+            <span id="seq-timer-label">15s</span>
+          </div>
           <div class="sequence-display" id="seq-display"></div>
           <div class="option-grid" id="seq-options"></div>
           <div class="feedback" id="seq-feedback"></div>
@@ -94,14 +107,19 @@
         <div class="panel-header">
           <button class="back-btn" data-back>← Menú</button>
           <div class="stat-row">
-            <span>Palabra: <b id="word-count">1</b>/8</span>
+            <span>Palabra: <b id="word-count">1</b>/<b id="word-total">8</b></span>
             <span>Aciertos: <b id="word-correct">0</b></span>
             <span>Mejor: <b id="word-best">0</b></span>
           </div>
         </div>
         <div class="center-col">
           <h2>Palabras Revueltas</h2>
+          <div class="difficulty-row" id="word-diff"></div>
           <p class="hero-line" style="margin:0" id="word-hint">Pista aquí</p>
+          <div class="timer-row">
+            ⏱️ <div class="progress-bar"><div class="timer-fill" id="word-timer-fill"></div></div>
+            <span id="word-timer-label">20s</span>
+          </div>
           <div class="big-number" id="word-scrambled" style="letter-spacing:0.1em;font-size:2.2rem">?</div>
           <input type="text" id="word-input" placeholder="Escribe tu respuesta" autocomplete="off" />
           <button class="btn" id="word-submit">Comprobar</button>
@@ -116,13 +134,14 @@
         <div class="panel-header">
           <button class="back-btn" data-back>← Menú</button>
           <div class="stat-row">
-            <span>Ronda: <b id="reac-count">1</b>/5</span>
+            <span>Ronda: <b id="reac-count">1</b>/<b id="reac-total">5</b></span>
             <span>Promedio: <b id="reac-avg">—</b></span>
             <span>Mejor: <b id="reac-best">—</b></span>
           </div>
         </div>
         <div class="center-col">
           <h2>Tiempo de Reacción</h2>
+          <div class="difficulty-row" id="reac-diff"></div>
           <p class="hero-line" style="margin:0">Espera a que el recuadro se ponga verde y haz clic lo más rápido posible.</p>
           <div class="reaction-box wait" id="reaction-box">Haz clic para empezar</div>
           <div class="feedback" id="reac-feedback"></div>

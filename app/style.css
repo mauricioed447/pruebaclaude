@@ -63,6 +63,12 @@ a { color: inherit; }
   font-size: 1.1rem;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .total-score {
   display: flex;
   align-items: center;
@@ -79,6 +85,21 @@ a { color: inherit; }
   color: var(--accent-2);
   font-weight: 800;
 }
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:hover { border-color: var(--accent); }
 
 .view { display: none; }
 .view.active { display: block; }
@@ -269,21 +290,22 @@ input:focus { outline: 2px solid var(--accent); }
 .memory-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
   margin: 0 auto;
 }
 
 .memory-tile {
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--bg-elev);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  font-size: 3rem;
+  line-height: 1;
   cursor: pointer;
   user-select: none;
 }
@@ -371,7 +393,28 @@ input:focus { outline: 2px solid var(--accent); }
 .reaction-box.wait { background: rgba(255, 92, 138, 0.15); }
 .reaction-box.go { background: rgba(55, 230, 176, 0.28); }
 
+.timer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.timer-row .progress-bar { flex: 1; }
+.timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--warn));
+  width: 100%;
+  transition: width 0.1s linear;
+}
+.timer-fill.low { background: linear-gradient(90deg, var(--accent-3), #ff2f5c); }
+
 @media (max-width: 520px) {
   .big-number { font-size: 2.2rem; }
   .option-grid { grid-template-columns: 1fr 1fr; }
+  .memory-tile { font-size: 2.2rem; }
 }
