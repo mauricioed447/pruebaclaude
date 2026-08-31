@@ -89,26 +89,30 @@ img { max-width: 100%; }
   z-index: -1;
 }
 
-.hero-bg-graphic {
+.hero-bg-video {
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: 0.55;
   overflow: hidden;
   pointer-events: none;
+  border-radius: 0 0 32px 32px;
 }
-.hero-bg-graphic svg { width: 100%; height: 100%; }
-.net-lines line {
-  stroke: var(--accent);
-  stroke-opacity: 0.28;
-  stroke-width: 1.4;
+.hero-bg-video video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.65;
+  filter: saturate(1.1);
 }
-.net-nodes circle {
-  fill: var(--accent-2);
-  fill-opacity: 0.55;
+.hero-bg-fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(15,18,32,0.35) 0%, rgba(15,18,32,0.55) 55%, var(--bg) 100%),
+    radial-gradient(ellipse at center, transparent 35%, rgba(15,18,32,0.5) 85%);
 }
 @media (max-width: 700px) {
-  .hero-bg-graphic { opacity: 0.3; }
+  .hero-bg-video video { opacity: 0.45; }
 }
 .eyebrow {
   display: inline-flex;
