@@ -1,16 +1,16 @@
 :root {
-  --bg: #0f1220;
-  --bg-elev: #171b2e;
-  --bg-card: #1e2338;
-  --border: #2a2f4a;
-  --text: #f1f2f8;
-  --text-dim: #9aa0c3;
+  --bg: #f7f7fd;
+  --bg-elev: #edf0fb;
+  --bg-card: #ffffff;
+  --border: #dfe2f5;
+  --text: #1c2033;
+  --text-dim: #656a8a;
   --accent: #7c5cff;
-  --accent-2: #37e6b0;
-  --accent-3: #ff5c8a;
-  --warn: #ffb454;
+  --accent-2: #0ea975;
+  --accent-3: #e0356f;
+  --warn: #e08a00;
   --radius: 16px;
-  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --shadow: 0 10px 30px rgba(124, 92, 255, 0.16);
   font-size: 16px;
 }
 
@@ -19,7 +19,11 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at 20% -10%, #241f45 0%, var(--bg) 45%), var(--bg);
+  background:
+    radial-gradient(circle at 10% -10%, rgba(124, 92, 255, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(14, 169, 117, 0.14) 0%, transparent 40%),
+    radial-gradient(circle at 30% 100%, rgba(224, 53, 111, 0.10) 0%, transparent 45%),
+    var(--bg);
   color: var(--text);
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   min-height: 100vh;
@@ -366,7 +370,7 @@ input:focus { outline: 2px solid var(--accent); }
   font-weight: 700;
   cursor: pointer;
 }
-.diff-btn.active { color: white; border-color: var(--accent); background: rgba(124,92,255,0.25); }
+.diff-btn.active { color: white; border-color: var(--accent); background: var(--accent); }
 
 .footer-note {
   margin-top: 40px;
