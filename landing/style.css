@@ -114,6 +114,30 @@ img { max-width: 100%; }
 @media (max-width: 700px) {
   .hero-bg-video video { opacity: 0.45; }
 }
+
+.hero-sound-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(23, 27, 46, 0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hero-sound-btn:hover { border-color: var(--accent); }
+.hero-sound-btn[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); }
+@media (max-width: 700px) {
+  .hero-sound-btn { top: 12px; right: 12px; font-size: 0.72rem; padding: 7px 12px; }
+}
 .eyebrow {
   display: inline-flex;
   align-items: center;

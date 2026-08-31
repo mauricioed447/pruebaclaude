@@ -28,11 +28,14 @@
 
   <header id="top" class="hero container">
     <div class="hero-bg-video" aria-hidden="true">
-      <video autoplay muted loop playsinline preload="auto">
-        <source src="assets/brain-hero.mp4" type="video/mp4" />
+      <video id="hero-video" autoplay muted loop playsinline preload="auto">
+        <source src="assets/puzzle-hero.mp4" type="video/mp4" />
       </video>
       <div class="hero-bg-fade"></div>
     </div>
+    <button id="hero-sound-toggle" class="hero-sound-btn" type="button" aria-pressed="false">
+      🔇 Activar sonido
+    </button>
     <div class="eyebrow">🧠 5 desafíos · 100% gratis · sin registro</div>
     <h1>Entrena tu mente con <span>desafíos mentales</span> diarios</h1>
     <p class="lead">
@@ -200,5 +203,16 @@
     </div>
   </footer>
 
+  <script>
+    const heroVideo = document.getElementById("hero-video");
+    const soundBtn = document.getElementById("hero-sound-toggle");
+    soundBtn.addEventListener("click", () => {
+      const nowMuted = !heroVideo.muted;
+      heroVideo.muted = nowMuted;
+      if (!nowMuted) heroVideo.play().catch(() => {});
+      soundBtn.textContent = nowMuted ? "🔇 Activar sonido" : "🔊 Silenciar";
+      soundBtn.setAttribute("aria-pressed", String(!nowMuted));
+    });
+  </script>
 </body>
 </html>
