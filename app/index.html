@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MenteActiva — Desafíos Mentales</title>
+  <meta name="description" content="Entrena tu mente con desafíos de memoria, cálculo, lógica, palabras y reflejos." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="../landing/index.html">
+        <span class="brand-mark">🧠</span>
+        MenteActiva
+      </a>
+      <div class="total-score">
+        Puntos totales: <span class="value" id="total-score">0</span>
+      </div>
+    </header>
+
+    <!-- MENU -->
+    <section id="view-menu" class="view active">
+      <p class="hero-line">Elige un desafío y pon tu mente a prueba. Tu mejor puntaje se guarda en este dispositivo.</p>
+      <div class="game-grid" id="game-grid"></div>
+      <p class="footer-note">Hecho para entrenar memoria, cálculo, lógica, vocabulario y reflejos. Progreso guardado localmente en tu navegador.</p>
+    </section>
+
+    <!-- MEMORY GAME -->
+    <section id="view-memory" class="view">
+      <div class="panel">
+        <div class="panel-header">
+          <button class="back-btn" data-back>← Menú</button>
+          <div class="stat-row">
+            <span>Movimientos: <b id="mem-moves">0</b></span>
+            <span>Tiempo: <b id="mem-time">0s</b></span>
+            <span>Mejor: <b id="mem-best">—</b></span>
+          </div>
+        </div>
+        <div class="center-col">
+          <h2>Memoria</h2>
+          <div class="difficulty-row" id="mem-diff"></div>
+          <div class="memory-grid" id="memory-grid"></div>
+          <div class="feedback" id="mem-feedback"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MATH GAME -->
+    <section id="view-math" class="view">
+      <div class="panel">
+        <div class="panel-header">
+          <button class="back-btn" data-back>← Menú</button>
+          <div class="stat-row">
+            <span>Pregunta: <b id="math-count">1</b>/10</span>
+            <span>Aciertos: <b id="math-correct">0</b></span>
+            <span>Mejor racha: <b id="math-best">0</b></span>
+          </div>
+        </div>
+        <div class="center-col">
+          <h2>Cálculo Rápido</h2>
+          <div class="progress-bar"><div class="progress-fill" id="math-progress"></div></div>
+          <div class="big-number" id="math-question">?</div>
+          <div class="option-grid" id="math-options"></div>
+          <div class="feedback" id="math-feedback"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEQUENCE GAME -->
+    <section id="view-sequence" class="view">
+      <div class="panel">
+        <div class="panel-header">
+          <button class="back-btn" data-back>← Menú</button>
+          <div class="stat-row">
+            <span>Nivel: <b id="seq-level">1</b></span>
+            <span>Mejor nivel: <b id="seq-best">0</b></span>
+          </div>
+        </div>
+        <div class="center-col">
+          <h2>Secuencia Lógica</h2>
+          <p class="hero-line" style="margin:0">¿Qué número continúa la serie?</p>
+          <div class="sequence-display" id="seq-display"></div>
+          <div class="option-grid" id="seq-options"></div>
+          <div class="feedback" id="seq-feedback"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORD GAME -->
+    <section id="view-word" class="view">
+      <div class="panel">
+        <div class="panel-header">
+          <button class="back-btn" data-back>← Menú</button>
+          <div class="stat-row">
+            <span>Palabra: <b id="word-count">1</b>/8</span>
+            <span>Aciertos: <b id="word-correct">0</b></span>
+            <span>Mejor: <b id="word-best">0</b></span>
+          </div>
+        </div>
+        <div class="center-col">
+          <h2>Palabras Revueltas</h2>
+          <p class="hero-line" style="margin:0" id="word-hint">Pista aquí</p>
+          <div class="big-number" id="word-scrambled" style="letter-spacing:0.1em;font-size:2.2rem">?</div>
+          <input type="text" id="word-input" placeholder="Escribe tu respuesta" autocomplete="off" />
+          <button class="btn" id="word-submit">Comprobar</button>
+          <div class="feedback" id="word-feedback"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REACTION GAME -->
+    <section id="view-reaction" class="view">
+      <div class="panel">
+        <div class="panel-header">
+          <button class="back-btn" data-back>← Menú</button>
+          <div class="stat-row">
+            <span>Ronda: <b id="reac-count">1</b>/5</span>
+            <span>Promedio: <b id="reac-avg">—</b></span>
+            <span>Mejor: <b id="reac-best">—</b></span>
+          </div>
+        </div>
+        <div class="center-col">
+          <h2>Tiempo de Reacción</h2>
+          <p class="hero-line" style="margin:0">Espera a que el recuadro se ponga verde y haz clic lo más rápido posible.</p>
+          <div class="reaction-box wait" id="reaction-box">Haz clic para empezar</div>
+          <div class="feedback" id="reac-feedback"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section id="view-result" class="view">
+      <div class="panel">
+        <div class="center-col">
+          <h2 id="result-title">¡Buen trabajo!</h2>
+          <div class="result-summary">
+            <span class="score-value" id="result-score">0</span>
+            <span id="result-detail" class="hero-line" style="margin:0"></span>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+            <button class="btn" id="result-retry">Reintentar</button>
+            <button class="btn btn-secondary" data-back>Volver al menú</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
